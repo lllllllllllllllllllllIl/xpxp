@@ -1,0 +1,20 @@
+-- Check for HTTP service support
+local httpService = game:GetService("HttpService")
+
+-- Attempt to retrieve an HWID using a generic approach
+local function getHWID()
+    -- Use game:GetService to fetch a unique identifier based on the device
+    return game:GetService("RbxAnalyticsService"):GetClientId()
+end
+
+-- Get HWID
+local hwid = getHWID()
+
+if hwid then
+    -- Display the HWID
+    print("Your HWID: " .. hwid)
+    -- Copy to clipboard
+    setclipboard(hwid)
+else
+    warn("Failed to retrieve HWID.")
+end
