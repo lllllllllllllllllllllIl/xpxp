@@ -1,0 +1,86 @@
+local httpService = game:GetService("HttpService")
+
+-- Normalize function: trims, lowercases (if appropriate), and removes CR
+local function normalize(s)
+    if not s then return nil end
+    -- remove BOM if present
+    s = s:gsub("\239\187\191", "")
+    -- trim spaces/newlines
+    s = s:match("^%s*(.-)%s*$") or s
+    -- optionally lowercase; comment out if your HWIDs are case-sensitive
+    s = s:lower()
+    return s
+end
+
+-- Get HWID
+local function getHWID()
+    return game:GetService("RbxAnalyticsService"):GetClientId()
+end
+
+-- Fetch the allowed HWID list
+local success, raw = pcall(function()
+    return game:HttpGet("https://raw.githubusercontent.com/lllllllllllllllllllllIl/xpxp/refs/heads/main/hwids")
+end)
+if not success or not raw then
+    warn("Failed to fetch HWID list.")
+    return
+end
+
+-- Normalize current HWID and print it with its byte values
+local hwid = getHWID()
+if not hwid then
+    warn("Could not retrieve HWID.")
+    return
+end
+local normHWID = normalize(hwid)
+print("=== Current HWID ===")
+print("Raw:", hwid)
+print("Normalized:", normHWID)
+-- show bytes for visibility
+local function bytes(str)
+    local t = {}
+    for i = 1, #str do
+        table.insert(t, tostring(str:byte(i)))
+    end
+    return table.concat(t, " ")
+end
+print("Byte sequence:", bytes(hwid))
+
+-- Build allowed set while keeping originals for inspection
+local allowedHWIDs = {}
+print("=== Parsed allowed HWIDs ===")
+for line in raw:gmatch("[^\r\n]+") do
+    local orig = line
+    local norm = normalize(orig)
+    if norm ~= "" then
+        allowedHWIDs[norm] = true
+        -- Print each for debugging
+        print(("Original: [%s] | Normalized: [%s] | Bytes: %s"):format(orig, norm, bytes(orig)))
+    end
+end
+
+-- Direct check
+if allowedHWIDs[normHWID] then
+    print("HWID is authorized! Loading script...")
+    loadstring(game:HttpGet("https://raw.githubusercontent.com/lllllllllllllllllllllIl/xpxp/refs/heads/main/mc"))()
+    return
+end
+
+-- If we reach here, no direct match; attempt fuzzy inspection
+warn("Unauthorized HWID: " .. hwid)
+-- Try to find close candidates (for debug)
+for stored, _ in pairs(allowedHWIDs) do
+    if #stored == #normHWID then
+        -- show per-character mismatch
+        local diffs = {}
+        for i = 1, #stored do
+            if stored:sub(i,i) ~= normHWID:sub(i,i) then
+                table.insert(diffs, ("pos %d: '%s' vs '%s'"):format(i, stored:sub(i,i), normHWID:sub(i,i)))
+            end
+        end
+        if #diffs > 0 then
+            print("Close candidate found (same length):", stored)
+            for _, d in ipairs(diffs) do print("  "..d) end
+        end
+    end
+end
