@@ -111,7 +111,7 @@ end
 -- Teleport function
 local function teleportToTarget()
     if player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
-        player.Character.HumanoidRootPart.CFrame = CFrame.new(targetPos + Vector3.new(0, 2, 0)) -- slightly above ground
+        player.Character.HumanoidRootPart.CFrame = CFrame.new(targetPos + Vector3.new(0, 0, 0)) -- slightly above ground
         print("Teleported player to", targetPos)
     end
 end
