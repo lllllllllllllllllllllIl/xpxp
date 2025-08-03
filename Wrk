@@ -13,6 +13,9 @@ local shotMultiplier = 600
 local firingEnabled = false
 local fired = false
 
+-- State for hitbox touch exhaustion
+local touchExhausted = false
+
 -- GUI Setup
 local screenGui = Instance.new("ScreenGui", PlayerGui)
 screenGui.Name = "ShotToggleGUI"
@@ -58,39 +61,59 @@ local function getTouchPart()
     return char:WaitForChild("HumanoidRootPart") or char:FindFirstChildWhichIsA("BasePart")
 end
 
+local function disableAll()
+    firingEnabled = false
+    toggleButton.Active = false
+    toggleButton.AutoButtonColor = false
+    toggleButton.Text = "Disabled"
+    toggleButton.BackgroundColor3 = Color3.fromRGB(100, 100, 100)
+end
+
 local function ensureSpamLoop()
     if spamRunning then return end
+    if touchExhausted then return end
     if typeof(firetouchinterest) ~= "function" then
         warn("firetouchinterest not available; cannot spam touch interest.")
         return
     end
 
+    local hitbox = getHitbox()
+    if not hitbox then
+        warn("OOB4 hitbox not found under OOBS.")
+        return
+    end
+
+    local toucher = getTouchPart()
+    if not toucher then
+        warn("No valid toucher part on character.")
+        return
+    end
+
     spamRunning = true
     task.spawn(function()
-        local hitbox = getHitbox()
-        if not hitbox then
-            warn("OOB4 hitbox not found under OOBS.")
-            spamRunning = false
-            return
-        end
-
-        local toucher = getTouchPart()
-        if not toucher then
-            warn("No valid toucher part on character.")
-            spamRunning = false
-            return
-        end
-
+        local startTime = os.clock()
         while os.clock() < spamEnd do
+            -- If exhausted externally in between, break
+            if touchExhausted then
+                break
+            end
             firetouchinterest(toucher, hitbox, 0)
             firetouchinterest(toucher, hitbox, 1)
-            task.wait(0) -- minimal yield to keep it tight but cooperative
+            task.wait(0) -- minimal yield
         end
         spamRunning = false
+
+        -- Mark exhausted after completing the 10s window once
+        if os.clock() >= startTime + 10 then
+            touchExhausted = true
+            -- Disable UI to indicate it's dead / no longer working
+            disableAll()
+            print("Touch spam exhausted after 10s; further touching disabled.")
+        end
     end)
 end
 
--- Fire Shot Function (and also triggers touch spam on shot)
+-- Fire Shot Function (and also triggers touch interest spam on shot)
 local function fireShot()
     local args = {
         [1] = false,
@@ -106,9 +129,11 @@ local function fireShot()
                 shootingEvent:FireServer(unpack(args))
             end
             print("Fired", shotMultiplier, "shots at power ≥", powerThreshold)
-            -- Also start touch interest spam for 10 seconds on shot
-            spamEnd = os.clock() + 10
-            ensureSpamLoop()
+            -- Also start touch interest spam for 10 seconds on shot (only once, then exhausts)
+            if not touchExhausted then
+                spamEnd = os.clock() + 10
+                ensureSpamLoop()
+            end
         end
     end
 end
@@ -127,11 +152,11 @@ thresholdConnection = power:GetPropertyChangedSignal("Value"):Connect(function()
     end
 end)
 
--- Separate listener: any change to power extends/starts 10s touch spam
+-- Separate listener: any change to power extends/starts 10s touch spam (unless exhausted)
 local lastPower = power.Value
 power:GetPropertyChangedSignal("Value"):Connect(function()
     local newPower = power.Value
-    if newPower ~= lastPower then
+    if newPower ~= lastPower and not touchExhausted then
         spamEnd = os.clock() + 10
         ensureSpamLoop()
         lastPower = newPower
