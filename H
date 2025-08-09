@@ -1,0 +1,142 @@
+-- LocalScript (client)
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local player = Players.LocalPlayer
+local PlayerGui = player:WaitForChild("PlayerGui")
+local backpack = player:WaitForChild("Backpack")
+local actionValues = backpack:WaitForChild("ActionValues")
+local power = actionValues:WaitForChild("Power")
+
+local powerThreshold = 54
+local shotMultiplier = 600
+local firingEnabled = false
+local fired = false
+
+-- State for touch spam
+local spamEnd = 0
+local spamRunning = false
+local active = true -- when false, touch spam stops and won't restart
+
+-- GUI Setup
+local screenGui = Instance.new("ScreenGui", PlayerGui)
+screenGui.Name = "ShotToggleGUI"
+screenGui.ResetOnSpawn = false
+
+local frame = Instance.new("Frame", screenGui)
+frame.Size = UDim2.new(0, 200, 0, 50)
+frame.Position = UDim2.new(0, 20, 0, 100)
+frame.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+frame.BorderSizePixel = 0
+frame.Active = true
+frame.Draggable = true
+
+local toggleButton = Instance.new("TextButton", frame)
+toggleButton.Size = UDim2.new(1, 0, 1, 0)
+toggleButton.Text = "Auto Shot: OFF"
+toggleButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+toggleButton.BackgroundColor3 = Color3.fromRGB(0, 150, 255)
+toggleButton.Font = Enum.Font.SourceSansBold
+toggleButton.TextSize = 18
+
+-- Toggle Button Logic
+toggleButton.MouseButton1Click:Connect(function()
+    if not fired then
+        firingEnabled = not firingEnabled
+        toggleButton.Text = firingEnabled and "Auto Shot: ON" or "Auto Shot: OFF"
+        toggleButton.BackgroundColor3 = firingEnabled and Color3.fromRGB(0, 200, 0) or Color3.fromRGB(0, 150, 255)
+    end
+end)
+
+-- Helpers for touch interest
+local function getHitbox()
+    local oobs = workspace:FindFirstChild("OOBS")
+    if not oobs then return nil end
+    return oobs:FindFirstChild("OOB4")
+end
+
+local function getTouchPart()
+    local char = player.Character or player.CharacterAdded:Wait()
+    return char:WaitForChild("HumanoidRootPart") or char:FindFirstChildWhichIsA("BasePart")
+end
+
+-- Core spam loop (singleton, extends duration on updates)
+local function ensureSpamLoop()
+    if spamRunning or not active then return end
+    if typeof(firetouchinterest) ~= "function" then
+        warn("firetouchinterest not available; cannot spam touch interest.")
+        return
+    end
+
+    spamRunning = true
+    task.spawn(function()
+        local hitbox = getHitbox()
+        if not hitbox then
+            warn("OOB4 hitbox not found under OOBS.")
+            spamRunning = false
+            return
+        end
+
+        local toucher = getTouchPart()
+        if not toucher then
+            warn("No valid toucher part on character.")
+            spamRunning = false
+            return
+        end
+
+        while active and os.clock() < spamEnd do
+            firetouchinterest(toucher, hitbox, 0)
+            firetouchinterest(toucher, hitbox, 1)
+            task.wait(0)
+        end
+        spamRunning = false
+    end)
+end
+
+-- Fire Shot Function
+local function fireShot()
+    local args = {
+        [1] = false,
+        [2] = "Shooting",
+        [3] = "Standing Shot"
+    }
+
+    local playerEvents = backpack:FindFirstChild("PlayerEvents") or ReplicatedStorage:FindFirstChild("PlayerEvents")
+    if playerEvents then
+        local shootingEvent = playerEvents:FindFirstChild("Shooting")
+        if shootingEvent then
+            for i = 1, shotMultiplier do
+                shootingEvent:FireServer(unpack(args))
+            end
+            print("Fired", shotMultiplier, "shots at power ≥", powerThreshold)
+            spamEnd = os.clock() + 10
+            ensureSpamLoop()
+        end
+    end
+end
+
+-- Listeners
+local lastPower = power.Value
+
+power:GetPropertyChangedSignal("Value"):Connect(function()
+    if not fired and firingEnabled and power.Value >= powerThreshold then
+        fired = true
+        fireShot()
+        active = false -- stop future touch spam if desired
+        print("Shot fired. Touch spam stopped, GUI remains.")
+    end
+end)
+
+power:GetPropertyChangedSignal("Value"):Connect(function()
+    if not active then return end
+    local newPower = power.Value
+    if newPower ~= lastPower then
+        spamEnd = os.clock() + 10
+        ensureSpamLoop()
+        lastPower = newPower
+    end
+end)
+
+if not player.Character then
+    player.CharacterAdded:Wait()
+end
