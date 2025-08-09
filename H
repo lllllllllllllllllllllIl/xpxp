@@ -13,6 +13,7 @@ local minPower = 62
 local maxPower = 65
 local shotMultiplier = 1
 local firingEnabled = false
+local lastInRange = false -- Track if we were in range last update
 
 -- Touch spam state
 local spamEnd = 0
@@ -92,11 +93,13 @@ local function fireShot()
     end
 end
 
--- Listen for changes
+-- Listen for range entry
 power:GetPropertyChangedSignal("Value"):Connect(function()
-    if firingEnabled and power.Value >= minPower and power.Value <= maxPower then
+    local inRange = (power.Value >= minPower and power.Value <= maxPower)
+    if firingEnabled and inRange and not lastInRange then
         fireShot()
     end
+    lastInRange = inRange
 end)
 
 if not player.Character then
