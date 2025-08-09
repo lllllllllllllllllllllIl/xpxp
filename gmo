@@ -1,0 +1,126 @@
+local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
+
+-- Check if Rayfield is loaded correctly
+if not Rayfield then
+    warn("Failed to load Rayfield library")
+    return
+end
+
+local Window = Rayfield:CreateWindow({
+    Name = "Vision Hub",
+    LoadingTitle = "Vision Script",
+    LoadingSubtitle = "by Vision",
+    ConfigurationSaving = {
+       Enabled = false,
+       FileName = "Vision Script Hub"
+    },
+    Discord = {
+       Enabled = true,
+       Invite = "GYH92be25Z",
+       RememberJoins = true
+    },
+    KeySystem = true,
+    KeySettings = {
+       Title = "Vision Script Hub| Key",
+       Subtitle = "Link In Discord Server",
+       Note = "Join Server From Misc Tab",
+       FileName = "BladeBallKey",
+       SaveKey = false,
+       GrabKeyFromSite = true,
+       Key = {"https://pastebin.com/raw/QZYyHa0H"}
+    }
+})
+
+if not Window then
+    warn("Failed to create window. Please check the Rayfield library or script parameters.")
+    return
+end
+
+local MainTab = Window:CreateTab("Main", nil) -- Title, Image
+local MainSection = MainTab:CreateSection("Useful") -- Changed 'Tab' to 'MainTab'
+
+local Toggle = MainTab:CreateToggle({
+    Name = "Auto Timer ( No quick draw )",
+    CurrentValue = false,
+    Flag = "AT_Toggle",
+    Callback = function(Value)
+        _G.ShootingEnabled = Value -- Store toggle state globally
+
+        if Value then
+            loadstring(game:HttpGet("https://raw.githubusercontent.com/kosta5630/RH2/refs/heads/main/Auto%20T"))();
+         end
+    end,
+})
+
+local Toggle = MainTab:CreateToggle({
+    Name = "Auto Timer ( Bronze quick draw )",
+    CurrentValue = false,
+    Flag = "AT1_Toggle",
+    Callback = function(Value)
+        _G.ShootingEnabled = Value -- Store toggle state globally
+
+        if Value then
+            loadstring(game:HttpGet("https://raw.githubusercontent.com/kosta5630/RH2/refs/heads/main/Auto%20Timer%20Bronze%20QD"))();
+         end
+    end,
+})
+
+local Toggle = MainTab:CreateToggle({
+    Name = "Auto Timer ( Silver quick draw )",
+    CurrentValue = false,
+    Flag = "AT2_Toggle",
+    Callback = function(Value)
+        _G.ShootingEnabled = Value -- Store toggle state globally
+
+        if Value then
+            loadstring(game:HttpGet("https://raw.githubusercontent.com/kosta5630/RH2/refs/heads/main/Silver%20QD%20Auto%20timer"))();
+         end
+    end,
+})
+
+local Toggle = MainTab:CreateToggle({
+    Name = "Auto Timer ( gold quick draw )",
+    CurrentValue = false,
+    Flag = "AT3_Toggle",
+    Callback = function(Value)
+        _G.ShootingEnabled = Value -- Store toggle state globally
+
+        if Value then
+            loadstring(game:HttpGet("https://raw.githubusercontent.com/kosta5630/RH2/refs/heads/main/GOLD%20QD%20Auto%20timer"))();
+        end
+    end,
+})
+
+MainTab:CreateToggle({
+    Name = "Auto XP",
+    CurrentValue = false,
+    Flag = "XP_Toggle",
+    Callback = function(Value)
+        if Value then
+            _G.Xp = true
+            task.spawn(function()
+                while _G.Xp do
+                    local character = game.Players.LocalPlayer.Character
+                    if character and character:FindFirstChild("LeftHand") then
+                        local ReplicatedStorage = game:GetService("ReplicatedStorage")
+                        local PhysicalEvent = ReplicatedStorage:WaitForChild("PlayerEvents"):WaitForChild("Physical")
+
+                        -- Fire the event 10 times quickly
+                        for i = 1, 10 do
+                            PhysicalEvent:FireServer(true, "Steal", character, character:FindFirstChild("LeftHand"))
+                        end
+
+                        print("Fired steal event 10x.")
+                    else
+                        warn("Character or LeftHand missing.")
+                    end
+
+                    task.wait(0.1) -- Wait between each batch
+                end
+            end)
+        else
+            _G.Xp = false
+            print("XP farming disabled.")
+        end
+    end,
+})
