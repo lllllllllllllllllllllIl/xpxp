@@ -8,17 +8,17 @@ local backpack = player:WaitForChild("Backpack")
 local actionValues = backpack:WaitForChild("ActionValues")
 local power = actionValues:WaitForChild("Power")
 
-local powerThreshold = 54
-local shotMultiplier = 600
+-- Settings
+local minPower = 62
+local maxPower = 65
+local shotMultiplier = 1
 local firingEnabled = false
-local fired = false
 
--- State for touch spam
+-- Touch spam state
 local spamEnd = 0
 local spamRunning = false
-local active = true -- when false, touch spam stops and won't restart
 
--- GUI Setup
+-- GUI
 local screenGui = Instance.new("ScreenGui", PlayerGui)
 screenGui.Name = "ShotToggleGUI"
 screenGui.ResetOnSpawn = false
@@ -39,16 +39,13 @@ toggleButton.BackgroundColor3 = Color3.fromRGB(0, 150, 255)
 toggleButton.Font = Enum.Font.SourceSansBold
 toggleButton.TextSize = 18
 
--- Toggle Button Logic
 toggleButton.MouseButton1Click:Connect(function()
-    if not fired then
-        firingEnabled = not firingEnabled
-        toggleButton.Text = firingEnabled and "Auto Shot: ON" or "Auto Shot: OFF"
-        toggleButton.BackgroundColor3 = firingEnabled and Color3.fromRGB(0, 200, 0) or Color3.fromRGB(0, 150, 255)
-    end
+    firingEnabled = not firingEnabled
+    toggleButton.Text = firingEnabled and "Auto Shot: ON" or "Auto Shot: OFF"
+    toggleButton.BackgroundColor3 = firingEnabled and Color3.fromRGB(0, 200, 0) or Color3.fromRGB(0, 150, 255)
 end)
 
--- Helpers for touch interest
+-- Helpers
 local function getHitbox()
     local oobs = workspace:FindFirstChild("OOBS")
     if not oobs then return nil end
@@ -60,47 +57,27 @@ local function getTouchPart()
     return char:WaitForChild("HumanoidRootPart") or char:FindFirstChildWhichIsA("BasePart")
 end
 
--- Core spam loop (singleton, extends duration on updates)
 local function ensureSpamLoop()
-    if spamRunning or not active then return end
-    if typeof(firetouchinterest) ~= "function" then
-        warn("firetouchinterest not available; cannot spam touch interest.")
-        return
-    end
-
+    if spamRunning or typeof(firetouchinterest) ~= "function" then return end
     spamRunning = true
     task.spawn(function()
         local hitbox = getHitbox()
-        if not hitbox then
-            warn("OOB4 hitbox not found under OOBS.")
-            spamRunning = false
-            return
-        end
-
         local toucher = getTouchPart()
-        if not toucher then
-            warn("No valid toucher part on character.")
+        if not hitbox or not toucher then
             spamRunning = false
             return
         end
-
-        while active and os.clock() < spamEnd do
+        while os.clock() < spamEnd do
             firetouchinterest(toucher, hitbox, 0)
             firetouchinterest(toucher, hitbox, 1)
-            task.wait(0)
+            task.wait()
         end
         spamRunning = false
     end)
 end
 
--- Fire Shot Function
 local function fireShot()
-    local args = {
-        [1] = false,
-        [2] = "Shooting",
-        [3] = "Standing Shot"
-    }
-
+    local args = {false, "Shooting", "Moving Shot"}
     local playerEvents = backpack:FindFirstChild("PlayerEvents") or ReplicatedStorage:FindFirstChild("PlayerEvents")
     if playerEvents then
         local shootingEvent = playerEvents:FindFirstChild("Shooting")
@@ -108,32 +85,17 @@ local function fireShot()
             for i = 1, shotMultiplier do
                 shootingEvent:FireServer(unpack(args))
             end
-            print("Fired", shotMultiplier, "shots at power ≥", powerThreshold)
+            print("Fired", shotMultiplier, "shots in range", minPower, "-", maxPower)
             spamEnd = os.clock() + 10
             ensureSpamLoop()
         end
     end
 end
 
--- Listeners
-local lastPower = power.Value
-
+-- Listen for changes
 power:GetPropertyChangedSignal("Value"):Connect(function()
-    if not fired and firingEnabled and power.Value >= powerThreshold then
-        fired = true
+    if firingEnabled and power.Value >= minPower and power.Value <= maxPower then
         fireShot()
-        active = false -- stop future touch spam if desired
-        print("Shot fired. Touch spam stopped, GUI remains.")
-    end
-end)
-
-power:GetPropertyChangedSignal("Value"):Connect(function()
-    if not active then return end
-    local newPower = power.Value
-    if newPower ~= lastPower then
-        spamEnd = os.clock() + 10
-        ensureSpamLoop()
-        lastPower = newPower
     end
 end)
 
