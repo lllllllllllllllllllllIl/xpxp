@@ -1,153 +1,279 @@
--- LocalScript (client)
-local Players = game:GetService("Players")
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
-local player = Players.LocalPlayer
-local PlayerGui = player:WaitForChild("PlayerGui")
-local backpack = player:WaitForChild("Backpack")
-local actionValues = backpack:WaitForChild("ActionValues")
-local power = actionValues:WaitForChild("Power")
-
-local powerThreshold = 54
-local shotMultiplier = 600
-local firingEnabled = false
-local fired = false
-
--- State for touch spam
-local spamEnd = 0
-local spamRunning = false
-local active = true -- when false, touch spam stops and won't restart
-
--- GUI Setup
-local screenGui = Instance.new("ScreenGui", PlayerGui)
-screenGui.Name = "ShotToggleGUI"
-screenGui.ResetOnSpawn = false
-
-local frame = Instance.new("Frame", screenGui)
-frame.Size = UDim2.new(0, 200, 0, 50)
-frame.Position = UDim2.new(0, 20, 0, 100)
-frame.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
-frame.BorderSizePixel = 0
-frame.Active = true
-frame.Draggable = true
-
-local toggleButton = Instance.new("TextButton", frame)
-toggleButton.Size = UDim2.new(1, 0, 1, 0)
-toggleButton.Text = "Auto Shot: OFF"
-toggleButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-toggleButton.BackgroundColor3 = Color3.fromRGB(0, 150, 255)
-toggleButton.Font = Enum.Font.SourceSansBold
-toggleButton.TextSize = 18
-
--- Toggle Button Logic
-toggleButton.MouseButton1Click:Connect(function()
-    if not fired then
-        firingEnabled = not firingEnabled
-        toggleButton.Text = firingEnabled and "Auto Shot: ON" or "Auto Shot: OFF"
-        toggleButton.BackgroundColor3 = firingEnabled and Color3.fromRGB(0, 200, 0) or Color3.fromRGB(0, 150, 255)
-    end
-end)
-
--- Helpers for touch interest
-local function getHitbox()
-    local oobs = workspace:FindFirstChild("OOBS")
-    if not oobs then return nil end
-    return oobs:FindFirstChild("OOB4")
+-- Check if Rayfield is loaded correctly
+if not Rayfield then
+    warn("Failed to load Rayfield library")
+    return
 end
 
-local function getTouchPart()
-    local char = player.Character or player.CharacterAdded:Wait()
-    return char:WaitForChild("HumanoidRootPart") or char:FindFirstChildWhichIsA("BasePart")
-end
-
--- Core spam loop (singleton, extends duration on updates)
-local function ensureSpamLoop()
-    if spamRunning or not active then return end
-    if typeof(firetouchinterest) ~= "function" then
-        warn("firetouchinterest not available; cannot spam touch interest.")
-        return
-    end
-
-    spamRunning = true
-    task.spawn(function()
-        local hitbox = getHitbox()
-        if not hitbox then
-            warn("OOB4 hitbox not found under OOBS.")
-            spamRunning = false
-            return
-        end
-
-        local toucher = getTouchPart()
-        if not toucher then
-            warn("No valid toucher part on character.")
-            spamRunning = false
-            return
-        end
-
-        while active and os.clock() < spamEnd do
-            firetouchinterest(toucher, hitbox, 0)
-            firetouchinterest(toucher, hitbox, 1)
-            task.wait(0) -- minimal yield
-        end
-        spamRunning = false
-    end)
-end
-
--- Fire Shot Function (also triggers touch spam on shot)
-local function fireShot()
-    local args = {
-        [1] = false,
-        [2] = "Shooting",
-        [3] = "Standing Shot"
+local Window = Rayfield:CreateWindow({
+    Name = "Vision Hub",
+    LoadingTitle = "Vision Script",
+    LoadingSubtitle = "by Vision",
+    ConfigurationSaving = {
+       Enabled = false,
+       FileName = "Vision Script Hub"
+    },
+    Discord = {
+       Enabled = true,
+       Invite = "GYH92be25Z",
+       RememberJoins = true
+    },
+    KeySystem = false,
+    KeySettings = {
+       Title = "Vision Script Hub| Key",
+       Subtitle = "Link In Discord Server",
+       Note = "Join Server From Misc Tab",
+       FileName = "BladeBallKey",
+       SaveKey = false,
+       GrabKeyFromSite = true,
+       Key = {"https://pastebin.com/raw/QZYyHa0H"}
     }
+})
 
-    local playerEvents = backpack:FindFirstChild("PlayerEvents") or ReplicatedStorage:FindFirstChild("PlayerEvents")
-    if playerEvents then
-        local shootingEvent = playerEvents:FindFirstChild("Shooting")
-        if shootingEvent then
-            for i = 1, shotMultiplier do
+if not Window then
+    warn("Failed to create window. Please check the Rayfield library or script parameters.")
+    return
+end
+
+local MainTab = Window:CreateTab("Main", nil) -- Title, Image
+local MainSection = MainTab:CreateSection("Useful") -- Changed 'Tab' to 'MainTab'
+
+MainTab:CreateToggle({
+    Name = "Defense XP",
+    CurrentValue = false,
+    Flag = "XP_Toggle",
+    Callback = function(Value)
+        if Value then
+            _G.Xp = true
+            task.spawn(function()
+                while _G.Xp do
+                    local character = game.Players.LocalPlayer.Character
+                    if character and character:FindFirstChild("LeftHand") then
+                        local ReplicatedStorage = game:GetService("ReplicatedStorage")
+                        local PhysicalEvent = ReplicatedStorage:WaitForChild("PlayerEvents"):WaitForChild("Physical")
+
+                        -- Fire the event 10 times quickly
+                        for i = 1, 10 do
+                            PhysicalEvent:FireServer(true, "Steal", character, character:FindFirstChild("LeftHand"))
+                        end
+
+                        print("Kosta Did It Better.")
+                    else
+                        warn("Character or LeftHand missing.")
+                    end
+
+                    task.wait(0.1) -- Wait between each batch
+                end
+            end)
+        else
+            _G.Xp = false
+            print("XP farming disabled.")
+        end
+    end,
+})
+
+MainTab:CreateToggle({
+    Name = "Auto Touch",
+    CurrentValue = false,
+    Flag = "OOB_Toggle",
+    Callback = function(Value)
+        if Value then
+            _G.Xpt = true
+            local Players = game:GetService("Players")
+            local player = Players.LocalPlayer
+            local backpack = player:WaitForChild("Backpack")
+            local actionValues = backpack:WaitForChild("ActionValues")
+            local power = actionValues:WaitForChild("Power")
+
+            local spamEnd = 0
+            local spamRunning = false
+            local lastPower = power.Value
+
+            local function getHitbox()
+                local oobs = workspace:FindFirstChild("OOBS")
+                if not oobs then return nil end
+                return oobs:FindFirstChild("OOB4")
+            end
+
+            local function getTouchPart()
+                local char = player.Character or player.CharacterAdded:Wait()
+                return char:WaitForChild("HumanoidRootPart") or char:FindFirstChildWhichIsA("BasePart")
+            end
+
+            local function ensureSpamLoop()
+                if spamRunning or not _G.Xpt then return end
+                if typeof(firetouchinterest) ~= "function" then
+                    return
+                end
+
+                spamRunning = true
+                task.spawn(function()
+                    local hitbox = getHitbox()
+                    if not hitbox then
+                        spamRunning = false
+                        return
+                    end
+
+                    local toucher = getTouchPart()
+                    if not toucher then
+                        spamRunning = false
+                        return
+                    end
+
+                    while _G.Xpt and os.clock() < spamEnd do
+                        firetouchinterest(toucher, hitbox, 0)
+                        firetouchinterest(toucher, hitbox, 1)
+                        task.wait(0)
+                    end
+                    spamRunning = false
+                end)
+            end
+
+            power:GetPropertyChangedSignal("Value"):Connect(function()
+                if not _G.Xpt then return end
+                local newPower = power.Value
+                if newPower ~= lastPower then
+                    spamEnd = os.clock() + 10
+                    ensureSpamLoop()
+                    lastPower = newPower
+                end
+            end)
+
+            if not player.Character then
+                player.CharacterAdded:Wait()
+            end
+        else
+            _G.Xpt = false
+        end
+    end,
+})
+
+MainTab:CreateToggle({
+    Name = "Shooting XP",
+    CurrentValue = false,
+    Flag = "Shooting_XP",
+    Callback = function(Value)
+        _G.Xps = Value
+
+        local Players = game:GetService("Players")
+        local ReplicatedStorage = game:GetService("ReplicatedStorage")
+        local player = Players.LocalPlayer
+        local backpack = player:WaitForChild("Backpack")
+        local actionValues = backpack:WaitForChild("ActionValues")
+        local power = actionValues:WaitForChild("Power")
+
+        -- Settings
+        local minPower = 50
+        local maxPower = 59
+        local shotMultiplier = 600
+        local cooldownTime = 1 -- seconds
+
+        local lastPower = power.Value
+        local lastFireTime = 0
+
+        local conn
+
+        local function fireShot()
+            local args = {
+                [1] = false,
+                [2] = "Shooting",
+                [3] = "Standing Shot"
+            }
+            local playerEvents = backpack:FindFirstChild("PlayerEvents") or ReplicatedStorage:FindFirstChild("PlayerEvents")
+            if playerEvents then
+                local shootingEvent = playerEvents:FindFirstChild("Shooting")
+                if shootingEvent then
+                    for i = 1, shotMultiplier do
+                        shootingEvent:FireServer(unpack(args))
+                    end
+                end
+            end
+        end
+
+        if Value then
+            conn = power:GetPropertyChangedSignal("Value"):Connect(function()
+                if not _G.Xps then return end
+
+                local currentPower = power.Value
+                local now = os.clock()
+
+                if currentPower >= minPower and currentPower <= maxPower and currentPower > lastPower then
+                    if now - lastFireTime >= cooldownTime then
+                        fireShot()
+                        lastFireTime = now
+                    end
+                end
+
+                lastPower = currentPower
+            end)
+        else
+            if conn then
+                conn:Disconnect()
+                conn = nil
+            end
+        end
+    end,
+})
+
+MainTab:CreateToggle({
+    Name = "Finishing XP",
+    CurrentValue = false,
+    Flag = "Finishing_XP",
+    Callback = function(Value)
+        _G.Xpf = Value
+
+        local Players = game:GetService("Players")
+        local ReplicatedStorage = game:GetService("ReplicatedStorage")
+        local player = Players.LocalPlayer
+        local backpack = player:WaitForChild("Backpack")
+        local actionValues = backpack:WaitForChild("ActionValues")
+        local power = actionValues:WaitForChild("Power")
+
+        -- Settings
+        local minPower = 50
+        local maxPower = 59
+        local shotMultiplier = 600
+        local cooldownTime = 1 -- seconds
+
+        local lastPower = power.Value
+        local lastFireTime = 0
+
+        local conn
+
+        local function fireShot()
+            local args = {
+                false,
+                "Shooting",
+                "Layup"
+            }
+            local shootingEvent = ReplicatedStorage:WaitForChild("PlayerEvents"):WaitForChild("Shooting")
+            for _ = 1, shotMultiplier do
                 shootingEvent:FireServer(unpack(args))
             end
-            print("Fired", shotMultiplier, "shots at power ≥", powerThreshold)
-            -- Start touch spam for 10 seconds
-            spamEnd = os.clock() + 10
-            ensureSpamLoop()
         end
-    end
-end
 
--- Listeners
-local thresholdConnection
-local powerChangeConnection
+        if Value then
+            conn = power:GetPropertyChangedSignal("Value"):Connect(function()
+                if not _G.Xpf then return end
 
--- Threshold-based one-time auto shot (and GUI teardown)
-thresholdConnection = power:GetPropertyChangedSignal("Value"):Connect(function()
-    if not fired and firingEnabled and power.Value >= powerThreshold then
-        fired = true
-        fireShot()
+                local currentPower = power.Value
+                local now = os.clock()
 
-        -- Cleanup: disable further spam and listeners
-        active = false
-        if thresholdConnection then thresholdConnection:Disconnect() end
-        if powerChangeConnection then powerChangeConnection:Disconnect() end
-        screenGui:Destroy()
-        print("Shot fired. GUI and listeners destroyed; touch spam stopped.")
-    end
-end)
+                if currentPower >= minPower and currentPower <= maxPower and currentPower > lastPower then
+                    if now - lastFireTime >= cooldownTime then
+                        fireShot()
+                        lastFireTime = now
+                    end
+                end
 
--- Any change to power extends/starts 10s touch spam (only while active)
-local lastPower = power.Value
-powerChangeConnection = power:GetPropertyChangedSignal("Value"):Connect(function()
-    if not active then return end
-    local newPower = power.Value
-    if newPower ~= lastPower then
-        spamEnd = os.clock() + 10
-        ensureSpamLoop()
-        lastPower = newPower
-    end
-end)
-
--- Ensure character loaded so toucher resolves early
-if not player.Character then
-    player.CharacterAdded:Wait()
-end
+                lastPower = currentPower
+            end)
+        else
+            if conn then
+                conn:Disconnect()
+                conn = nil
+            end
+        end
+    end,
+})
