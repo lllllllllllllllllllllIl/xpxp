@@ -19,7 +19,7 @@ local Window = Rayfield:CreateWindow({
        Invite = "GYH92be25Z",
        RememberJoins = true
     },
-    KeySystem = true,
+    KeySystem = false,
     KeySettings = {
        Title = "Vision Script Hub| Key",
        Subtitle = "Link In Discord Server",
@@ -40,7 +40,7 @@ local MainTab = Window:CreateTab("Main", nil) -- Title, Image
 local MainSection = MainTab:CreateSection("Useful") -- Changed 'Tab' to 'MainTab'
 
 MainTab:CreateToggle({
-    Name = "Auto XP",
+    Name = "Defense XP",
     CurrentValue = false,
     Flag = "XP_Toggle",
     Callback = function(Value)
@@ -79,7 +79,7 @@ MainTab:CreateToggle({
     Flag = "OOB_Toggle",
     Callback = function(Value)
         if Value then
-            _G.Xp = true
+            _G.Xpt = true
             local Players = game:GetService("Players")
             local player = Players.LocalPlayer
             local backpack = player:WaitForChild("Backpack")
@@ -102,7 +102,7 @@ MainTab:CreateToggle({
             end
 
             local function ensureSpamLoop()
-                if spamRunning or not _G.Xp then return end
+                if spamRunning or not _G.Xpt then return end
                 if typeof(firetouchinterest) ~= "function" then
                     return
                 end
@@ -121,7 +121,7 @@ MainTab:CreateToggle({
                         return
                     end
 
-                    while _G.Xp and os.clock() < spamEnd do
+                    while _G.Xpt and os.clock() < spamEnd do
                         firetouchinterest(toucher, hitbox, 0)
                         firetouchinterest(toucher, hitbox, 1)
                         task.wait(0)
@@ -131,7 +131,7 @@ MainTab:CreateToggle({
             end
 
             power:GetPropertyChangedSignal("Value"):Connect(function()
-                if not _G.Xp then return end
+                if not _G.Xpt then return end
                 local newPower = power.Value
                 if newPower ~= lastPower then
                     spamEnd = os.clock() + 10
@@ -144,7 +144,74 @@ MainTab:CreateToggle({
                 player.CharacterAdded:Wait()
             end
         else
-            _G.Xp = false
+            _G.Xpt = false
+        end
+    end,
+})
+
+MainTab:CreateToggle({
+    Name = "Shooting XP",
+    CurrentValue = false,
+    Flag = "Shooting_XP",
+    Callback = function(Value)
+        _G.Xps = Value
+
+        local Players = game:GetService("Players")
+        local ReplicatedStorage = game:GetService("ReplicatedStorage")
+        local player = Players.LocalPlayer
+        local backpack = player:WaitForChild("Backpack")
+        local actionValues = backpack:WaitForChild("ActionValues")
+        local power = actionValues:WaitForChild("Power")
+
+        -- Settings
+        local minPower = 50
+        local maxPower = 59
+        local shotMultiplier = 600
+        local cooldownTime = 1 -- seconds
+
+        local lastPower = power.Value
+        local lastFireTime = 0
+
+        local conn
+
+        local function fireShot()
+            local args = {
+                [1] = false,
+                [2] = "Shooting",
+                [3] = "Standing Shot"
+            }
+            local playerEvents = backpack:FindFirstChild("PlayerEvents") or ReplicatedStorage:FindFirstChild("PlayerEvents")
+            if playerEvents then
+                local shootingEvent = playerEvents:FindFirstChild("Shooting")
+                if shootingEvent then
+                    for i = 1, shotMultiplier do
+                        shootingEvent:FireServer(unpack(args))
+                    end
+                end
+            end
+        end
+
+        if Value then
+            conn = power:GetPropertyChangedSignal("Value"):Connect(function()
+                if not _G.Xps then return end
+
+                local currentPower = power.Value
+                local now = os.clock()
+
+                if currentPower >= minPower and currentPower <= maxPower and currentPower > lastPower then
+                    if now - lastFireTime >= cooldownTime then
+                        fireShot()
+                        lastFireTime = now
+                    end
+                end
+
+                lastPower = currentPower
+            end)
+        else
+            if conn then
+                conn:Disconnect()
+                conn = nil
+            end
         end
     end,
 })
