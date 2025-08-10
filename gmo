@@ -215,3 +215,65 @@ MainTab:CreateToggle({
         end
     end,
 })
+
+MainTab:CreateToggle({
+    Name = "Finishing XP",
+    CurrentValue = false,
+    Flag = "Finishing_XP",
+    Callback = function(Value)
+        _G.Xpf = Value
+
+        local Players = game:GetService("Players")
+        local ReplicatedStorage = game:GetService("ReplicatedStorage")
+        local player = Players.LocalPlayer
+        local backpack = player:WaitForChild("Backpack")
+        local actionValues = backpack:WaitForChild("ActionValues")
+        local power = actionValues:WaitForChild("Power")
+
+        -- Settings
+        local minPower = 50
+        local maxPower = 59
+        local shotMultiplier = 600
+        local cooldownTime = 1 -- seconds
+
+        local lastPower = power.Value
+        local lastFireTime = 0
+
+        local conn
+
+        local function fireShot()
+            local args = {
+                false,
+                "Shooting",
+                "Layup"
+            }
+            local shootingEvent = ReplicatedStorage:WaitForChild("PlayerEvents"):WaitForChild("Shooting")
+            for _ = 1, shotMultiplier do
+                shootingEvent:FireServer(unpack(args))
+            end
+        end
+
+        if Value then
+            conn = power:GetPropertyChangedSignal("Value"):Connect(function()
+                if not _G.Xpf then return end
+
+                local currentPower = power.Value
+                local now = os.clock()
+
+                if currentPower >= minPower and currentPower <= maxPower and currentPower > lastPower then
+                    if now - lastFireTime >= cooldownTime then
+                        fireShot()
+                        lastFireTime = now
+                    end
+                end
+
+                lastPower = currentPower
+            end)
+        else
+            if conn then
+                conn:Disconnect()
+                conn = nil
+            end
+        end
+    end,
+})
