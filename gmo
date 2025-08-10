@@ -39,58 +39,6 @@ end
 local MainTab = Window:CreateTab("Main", nil) -- Title, Image
 local MainSection = MainTab:CreateSection("Useful") -- Changed 'Tab' to 'MainTab'
 
-local Toggle = MainTab:CreateToggle({
-    Name = "Auto Timer ( No quick draw )",
-    CurrentValue = false,
-    Flag = "AT_Toggle",
-    Callback = function(Value)
-        _G.ShootingEnabled = Value -- Store toggle state globally
-
-        if Value then
-            loadstring(game:HttpGet("https://raw.githubusercontent.com/kosta5630/RH2/refs/heads/main/Auto%20T"))();
-         end
-    end,
-})
-
-local Toggle = MainTab:CreateToggle({
-    Name = "Auto Timer ( Bronze quick draw )",
-    CurrentValue = false,
-    Flag = "AT1_Toggle",
-    Callback = function(Value)
-        _G.ShootingEnabled = Value -- Store toggle state globally
-
-        if Value then
-            loadstring(game:HttpGet("https://raw.githubusercontent.com/kosta5630/RH2/refs/heads/main/Auto%20Timer%20Bronze%20QD"))();
-         end
-    end,
-})
-
-local Toggle = MainTab:CreateToggle({
-    Name = "Auto Timer ( Silver quick draw )",
-    CurrentValue = false,
-    Flag = "AT2_Toggle",
-    Callback = function(Value)
-        _G.ShootingEnabled = Value -- Store toggle state globally
-
-        if Value then
-            loadstring(game:HttpGet("https://raw.githubusercontent.com/kosta5630/RH2/refs/heads/main/Silver%20QD%20Auto%20timer"))();
-         end
-    end,
-})
-
-local Toggle = MainTab:CreateToggle({
-    Name = "Auto Timer ( gold quick draw )",
-    CurrentValue = false,
-    Flag = "AT3_Toggle",
-    Callback = function(Value)
-        _G.ShootingEnabled = Value -- Store toggle state globally
-
-        if Value then
-            loadstring(game:HttpGet("https://raw.githubusercontent.com/kosta5630/RH2/refs/heads/main/GOLD%20QD%20Auto%20timer"))();
-        end
-    end,
-})
-
 MainTab:CreateToggle({
     Name = "Auto XP",
     CurrentValue = false,
@@ -110,7 +58,7 @@ MainTab:CreateToggle({
                             PhysicalEvent:FireServer(true, "Steal", character, character:FindFirstChild("LeftHand"))
                         end
 
-                        print("Fired steal event 10x.")
+                        print("Kosta Did It Better.")
                     else
                         warn("Character or LeftHand missing.")
                     end
@@ -121,6 +69,82 @@ MainTab:CreateToggle({
         else
             _G.Xp = false
             print("XP farming disabled.")
+        end
+    end,
+})
+
+MainTab:CreateToggle({
+    Name = "Auto Touch",
+    CurrentValue = false,
+    Flag = "OOB_Toggle",
+    Callback = function(Value)
+        if Value then
+            _G.Xp = true
+            local Players = game:GetService("Players")
+            local player = Players.LocalPlayer
+            local backpack = player:WaitForChild("Backpack")
+            local actionValues = backpack:WaitForChild("ActionValues")
+            local power = actionValues:WaitForChild("Power")
+
+            local spamEnd = 0
+            local spamRunning = false
+            local lastPower = power.Value
+
+            local function getHitbox()
+                local oobs = workspace:FindFirstChild("OOBS")
+                if not oobs then return nil end
+                return oobs:FindFirstChild("OOB4")
+            end
+
+            local function getTouchPart()
+                local char = player.Character or player.CharacterAdded:Wait()
+                return char:WaitForChild("HumanoidRootPart") or char:FindFirstChildWhichIsA("BasePart")
+            end
+
+            local function ensureSpamLoop()
+                if spamRunning or not _G.Xp then return end
+                if typeof(firetouchinterest) ~= "function" then
+                    return
+                end
+
+                spamRunning = true
+                task.spawn(function()
+                    local hitbox = getHitbox()
+                    if not hitbox then
+                        spamRunning = false
+                        return
+                    end
+
+                    local toucher = getTouchPart()
+                    if not toucher then
+                        spamRunning = false
+                        return
+                    end
+
+                    while _G.Xp and os.clock() < spamEnd do
+                        firetouchinterest(toucher, hitbox, 0)
+                        firetouchinterest(toucher, hitbox, 1)
+                        task.wait(0)
+                    end
+                    spamRunning = false
+                end)
+            end
+
+            power:GetPropertyChangedSignal("Value"):Connect(function()
+                if not _G.Xp then return end
+                local newPower = power.Value
+                if newPower ~= lastPower then
+                    spamEnd = os.clock() + 10
+                    ensureSpamLoop()
+                    lastPower = newPower
+                end
+            end)
+
+            if not player.Character then
+                player.CharacterAdded:Wait()
+            end
+        else
+            _G.Xp = false
         end
     end,
 })
