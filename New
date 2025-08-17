@@ -3,7 +3,7 @@ local HttpService = game:GetService("HttpService")
 -- Your allowed HWIDs (in real use you’d probably fetch this from a server)
 local allowedHWIDs = {
     ["d81e-2ace-dca3-f780"] = true,
-    ["5a2cdbf2-c3b3-4ef4-bf4a-5c133637384f"] = true,
+    ["e4d797b5-326b-4b14-9895-55cc92ab94d1"] = true,
     ["80696043-9102-43d6-a97b-79b140c1078f"] = true,
     ["2a956cc1-d557-4719-af5a-40ac4aefb4f4"] = true,
     ["27dacfcb-130e-4a37-90bb-c58669095185"] = true,
