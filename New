@@ -8,7 +8,7 @@ local allowedHWIDs = {
     ["2a956cc1-d557-4719-af5a-40ac4aefb4f4"] = true,
     ["92708ddf-f11b-4bfd-ab13-5544396288c5"] = true,
     ["e7e440ad-73b2-4971-a34f-c8c31fb4a4b6"] = true,
-    ["92708ddf-f11b-4bfd-ab13-5544396288c5"] = true,
+    ["e51d3e61-a2a6-4cef-9da6-46d74dda49fa"] = true,
     ["SOME_HWID_2"] = true,
     ["SOME_HWID_2"] = true,
     -- add more here
